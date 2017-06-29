@@ -15,6 +15,7 @@ namespace Pinger
         public static ArrayList historiaIP = new ArrayList();
         public static ArrayList listaDat = new ArrayList();
         public static ArrayList listaDatDodanych = new ArrayList();
+        public static ArrayList listaAdresowIP = new ArrayList();
         public static int rozmiar = 0;
         public Form1()
         {
@@ -89,7 +90,7 @@ namespace Pinger
                 IPAddress[] ip = Dns.GetHostAddresses(domena);
                 spingowane = ip[0].ToString();
             }
-            catch (Exception e)
+            catch (Exception ex)
             {
                 spingowane = "Domena nieosiągalna !";
             }
@@ -111,16 +112,12 @@ namespace Pinger
             if (openDomainList.ShowDialog() == DialogResult.OK)
             {                
                     StreamReader strumien = new StreamReader(openDomainList.FileName);
-                    plikInfo.Text = Path.GetFileName(openDomainList.FileName);
                     while (!strumien.EndOfStream)
                         listaDomen.Add(strumien.ReadLine());
                     strumien.Close();
-                    label5.Text = listaDomen.Count.ToString();
                     pingProgress.Maximum = listaDomen.Count;                
             }            
-            wczytanoInfo.Text = "Plik załadowano !";
-            spingowanoInfo.Text = String.Empty;
-            zapisaneInfo.Text = String.Empty;
+            statusPingInfo.Text = "Plik załadowano !";
         }
         public static void pingList(ArrayList lista){
             foreach(String domena in lista){
@@ -131,25 +128,50 @@ namespace Pinger
         
         private void button3_Click(object sender, EventArgs e)
         {
-            String plik = String.Empty; 
             saveDomainListDialog.Filter = "Notepad|*.txt|All|*.*";
             if (saveDomainListDialog.ShowDialog() == DialogResult.OK)
             {
-                plik = saveDomainListDialog.FileName;
-                using (StreamWriter sw = new StreamWriter(saveDomainListDialog.FileName))
+                if (listaAdresowIP.Count.Equals(0))
                 {
-                    sw.WriteLine("Domena" + "\t" + "Adres IP");
-                    for (int i = 0; i < rozmiar; i++)
-                        sw.WriteLine(listaDomen[i] + "\t" + listaIP[i]);
-                    sw.Close();
+                    using (StreamWriter sw = new StreamWriter(saveDomainListDialog.FileName))
+                    {
+                        sw.WriteLine("Domena" + "\t" + "Adres IP");
+                        for (int i = 0; i < rozmiar; i++)
+                            sw.WriteLine(listaDomen[i] + "\t" + listaIP[i]);
+                        sw.Close();
+                    }
+                }
+                else
+                {
+                    using (StreamWriter sw = new StreamWriter(saveDomainListDialog.FileName))
+                    {
+                        sw.WriteLine("Domena\tSerwer");
+                        for (int i = 0; i < rozmiar; i++)
+                        {
+                            bool tmp = false;
+                            for(int j = 0; j < listaAdresowIP.Count; j++)
+                            {
+                                if(listaIP[i].Equals(listaAdresowIP[j]))
+                                {
+                                    tmp = true;
+                                }
+                            }
+                            if(tmp)
+                            {
+                                sw.WriteLine(listaDomen[i] + "\tnasz");
+                            }
+                            else
+                            {
+                                sw.WriteLine(listaDomen[i] + "\tklienta");
+                            }                           
+                        }                           
+                        sw.Close();
+                    }
                 }                                                                                
             }
-            plikInfo.Text = "Brak";
             wczytanoInfo.Text = String.Empty;
-            spingowanoInfo.Text = String.Empty;
-            zapisaneInfo.Text = "Zapisano do pliku: " + Path.GetFileName(plik);
+            statusPingInfo.Text = "Zapisano do pliku: " + Path.GetFileName(saveDomainListDialog.FileName);
             pingProgress.Value = 0;
-            label5.Text = String.Empty;
         }
 
         private void button4_Click(object sender, EventArgs e)
@@ -161,8 +183,7 @@ namespace Pinger
                 pingProgress.Value++;
             }
             wczytanoInfo.Text = String.Empty;
-            spingowanoInfo.Text = "Spingowano domeny !";
-            zapisaneInfo.Text = String.Empty;
+            statusPingInfo.Text = "Spingowano domeny !";
         }
 
         private void progressBar1_Click(object sender, EventArgs e)
@@ -204,14 +225,13 @@ namespace Pinger
             if (listDateDialog.ShowDialog() == DialogResult.OK)
             {
                 StreamReader strumien = new StreamReader(listDateDialog.FileName);
-                plikInfo.Text = Path.GetFileName(listDateDialog.FileName);
                 while (!strumien.EndOfStream)
                 {                  
                     DateTime data = DateTime.Parse(strumien.ReadLine());
                     listaDat.Add(data);
                 }                   
                 strumien.Close();
-                loadedInfo.Text = listaDat.Count.ToString();
+                statusDni.Text = "Wczytano dat : " + listaDat.Count.ToString();
             }
         }
 
@@ -221,34 +241,68 @@ namespace Pinger
             foreach(DateTime data in listaDat)
             {
                 int oIle = rand.Next(0, 2);
-                DateTime x = (oIle == 0) ? data.AddDays(2) : data.AddDays(3);
+                DateTime x;
+                if (data.DayOfWeek == DayOfWeek.Wednesday)
+                {
+                    x = data.AddDays(2);
+                }
+                else if (data.DayOfWeek == DayOfWeek.Thursday)
+                {
+                    x = data.AddDays(4);
+                }
+                else if (data.DayOfWeek == DayOfWeek.Friday)
+                {
+                    x = data.AddDays(3);
+                }
+                else
+                {
+                    x = (oIle == 0) ? data.AddDays(2) : data.AddDays(3);
+                }
                 listaDatDodanych.Add(x);
             }
-            loadedInfo.Text = "Dodano daty !";
+            statusDni.Text = "Dodano daty !";
         }
 
         private void saveDates_Click(object sender, EventArgs e)
         {
-            String plik = String.Empty;
             saveAddedDates.Filter = "Notepad|*.txt|All|*.*";
             if (saveAddedDates.ShowDialog() == DialogResult.OK)
             {
-                plik = saveAddedDates.FileName;
                 using (StreamWriter sw = new StreamWriter(saveAddedDates.FileName))
                 {
                     sw.WriteLine("Nowa Data");
                     string months = "0", days = "0";
                     foreach (DateTime data in listaDatDodanych)
                     {
-                        months = (data.Month < 10) ? ("0" + data.Month.ToString()) : data.Month.ToString();
+                        months = (data.Month < 10) ? ("0" + data.Month.ToString()) : data.Month.ToString();                       
                         days = (data.Day < 10) ? ("0" + data.Day.ToString()) : data.Day.ToString();
                         sw.WriteLine(data.Year + "-" + months + "-" + days);
                     }
                     sw.Close();
                 }
             }
-            savedTo.Text = "Zapisano do pliku: " + Path.GetFileName(plik);
-            loadedInfo.Text = String.Empty;          
+            statusDni.Text = "Zapisano do pliku: " + Path.GetFileName(saveAddedDates.FileName);        
+        }
+
+        private void button1_Click_1(object sender, EventArgs e)
+        {
+            openIPList.Filter = "Notepad|*.txt|All|*.*";
+            if (openIPList.ShowDialog() == DialogResult.OK)
+            {
+                StreamReader strumien = new StreamReader(openIPList.FileName);
+                while (!strumien.EndOfStream)
+                {
+                    listaAdresowIP.Add(strumien.ReadLine());
+                }
+                strumien.Close();
+            }
+            labelIPList.Text = "Załadowano plik z adresami do porównania";
+        }
+
+        private void button2_Click_1(object sender, EventArgs e)
+        {
+            listaAdresowIP.Clear();
+            labelIPList.Text = "Lista adresów do porównania pusta";
         }
     }
 }
