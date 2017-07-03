@@ -149,14 +149,18 @@ namespace Pinger
                         for (int i = 0; i < rozmiar; i++)
                         {
                             bool tmp = false;
-                            for(int j = 0; j < listaAdresowIP.Count; j++)
+                            for (int j = 0; j < listaAdresowIP.Count; j++)
                             {
-                                if(listaIP[i].Equals(listaAdresowIP[j]))
+                                if (listaIP[i].Equals(listaAdresowIP[j]))
                                 {
                                     tmp = true;
                                 }
                             }
-                            if(tmp)
+                            if (listaIP[i].Equals("Domena nieosiągalna !"))
+                            {
+                                sw.WriteLine(listaDomen[i] + "\tDomena nieosiągalna !");
+                            }                     
+                            else if(tmp)
                             {
                                 sw.WriteLine(listaDomen[i] + "\tnasz");
                             }
